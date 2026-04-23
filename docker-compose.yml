@@ -1,13 +1,14 @@
 services:
   api:
     build: ./api
+    ports:
+      - "8000:8000"
     depends_on:
       redis:
         condition: service_healthy
     environment:
-      REDIS_HOST: redis
-    ports:
-      - "8000:8000"
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
     networks:
       - backend
     restart: always
@@ -16,6 +17,11 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
 
   worker:
     build: ./worker
@@ -23,10 +29,16 @@ services:
       redis:
         condition: service_healthy
     environment:
-      REDIS_HOST: redis
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
     networks:
       - backend
     restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
 
   frontend:
     build: ./frontend
@@ -35,18 +47,27 @@ services:
     networks:
       - backend
     restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
 
   redis:
     image: redis:7-alpine
-    ports:
-      - "6379:6379"
     networks:
       - backend
+    restart: always
     healthcheck:
-  test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\""]
-  interval: 5s
-  timeout: 3s
-  retries: 5
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: "0.3"
+          memory: 128M
 
 networks:
   backend:
